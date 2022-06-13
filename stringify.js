@@ -4,11 +4,10 @@ var concat = Array.prototype.concat.bind(Array.prototype)
 var flatten = Function.apply.bind(Array.prototype.concat, Array.prototype)
 var CLOSABLE = true
 var NL = "\n"
-var TAB = "\t"
 var TEXT = "$"
 
 // The namespaces argument takes an object from alias to namespace URI.
-exports = module.exports = function(namespaces, obj) {
+exports = module.exports = function(namespaces, obj, identationChar, newlineChar) {
 	var version = escapeAttr(obj.version || "1.0")
 	var encoding = escapeAttr(obj.encoding || "UTF-8")
 
@@ -29,13 +28,13 @@ exports = module.exports = function(namespaces, obj) {
 	return (
 		"<?xml " + kv("version", version) + " " + kv("encoding", encoding) + " ?>" +
 		NL +
-		stringifyTag("", CLOSABLE, [tag[0], attrs, tag[2]])
+		stringifyTag("", CLOSABLE, identationChar, newlineChar, [tag[0], attrs, tag[2]])
 	)
 }
 
 // Performs Exclusive XML Canonicalization, or what XML Digital Signatures call
 // "http://www.w3.org/2001/10/xml-exc-c14n#".
-exports.canonicalize = function(namespaces, obj, path) {
+exports.canonicalize = function(namespaces, obj, path, identationChar, newlineChar) {
 	if (path == null || path.length == 0) path = [_.findKey(isElement, obj)]
 
 	var tagNameAndTag = follow(path, obj)
@@ -43,8 +42,8 @@ exports.canonicalize = function(namespaces, obj, path) {
 	obj = tagNameAndTag[1]
 
 	var tag = canonicalizeTag(namespaces, [], serializeTag(tagName, obj))
-	var indent = _.repeat(_.count(_.isString, path) - 1, "\t").join("")
-	return stringifyTag(indent, !CLOSABLE, tag).replace(/^\s+/, "")
+	var indent = _.repeat(_.count(_.isString, path) - 1, identationChar).join("")
+	return stringifyTag(indent, !CLOSABLE, identationChar, newlineChar, tag).replace(/^\s+/, "")
 }
 
 function serializeTag(tagName, obj) {
@@ -94,7 +93,7 @@ function canonicalizeTag(namespaces, scope, tag) {
 	]
 }
 
-function stringifyTag(indent, closable, tag) {
+function stringifyTag(indent, closable, identationChar, newlineChar, tag) {
 	var name = tag[0]
 	var attrs = tag[1]
 	var children = tag[2]
@@ -113,9 +112,9 @@ function stringifyTag(indent, closable, tag) {
 		case "array":
 			if (children.length == 0) return xml + (closable ? " />" : ">" + endTag)
 			return xml += (
-				">\n" +
-				children.map(stringifyTag.bind(null, TAB + indent, closable)).join(NL) +
-				"\n" + indent + endTag
+				">" + newlineChar +
+				children.map(stringifyTag.bind(null, identationChar + indent, closable, identationChar, newlineChar)).join(newlineChar) +
+				newlineChar + indent + endTag
 			)
 
 		default: throw new TypeError("Invalid child for: " + name)
